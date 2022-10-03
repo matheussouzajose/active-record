@@ -1,0 +1,51 @@
+version: "3.7"
+
+services:
+  app:
+    container_name: "app-active-record"
+    build:
+      context: .
+      args:
+        - user=${APP_USER}
+        - uid=${APP_UID}
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ${APP_PATH}:/var/www
+    networks:
+      - active-record
+
+  nginx:
+    container_name: "nginx-active-record"
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HOST_HTTP_PORT}:80"
+    volumes:
+      - ${APP_PATH}:/var/www
+      - ${NGINX_CONF_PATH}:/etc/nginx/conf.d/
+    networks:
+      - active-record
+
+  mysql:
+    container_name: "mysql-active-record"
+    build:
+      context: docker/mysql
+      args:
+        - MYSQL_VERSION=${MYSQL_VERSION}
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - TZ=${MYSQL_WORKSPACE_TIMEZONE}
+    volumes:
+      - ${MYSQL_DATA_PATH_HOST}/mysql:/var/lib/mysql
+      - ${MYSQL_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
+    ports:
+      - "${MYSQL_PORT}:3306"
+    networks:
+      - active-record
+
+networks:
+  active-record:
+    driver: bridge
